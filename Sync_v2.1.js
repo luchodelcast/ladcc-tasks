@@ -82,7 +82,7 @@ const MARCA_REGEX   = /\n?·\s*(LADCC-\d+)\s*$/;   // detecta "· LADCC-123" al 
 //   DCDG = Del Castillo Diazgranados (núcleo: Luis, Carolina, hijos)
 //   DCC  = Del Castillo Cadavid (origen: padres, hermana, Valledupar)
 const LISTAS_GOOGLE_TASKS = ['Superlikers', 'LADCC', 'DCDG', 'LIH', 'La Isabella', 'DCC'];
-const LISTA_DEFAULT = 'LADCC';
+const LISTA_DEFAULT = 'Superlikers';
 
 // Mapeo categoría → lista. Editable.
 const MAPEO_CATEGORIA_A_LISTA = {
@@ -980,10 +980,16 @@ function resolverTareaConocida(sheet, taskListIdActual, taskGoogle, meta,
   if (!estaEnFiltroSync(filaEfectiva)) return 'SKIP';
 
   // Cambio de categoría → mover a otra lista
-  const listaCorrecta = obtenerListaParaCategoria(filaEfectiva.categoria, listasMap);
-  if (listaCorrecta.id !== meta.taskListId) {
-    moverTareaDeListaAOtra(filaEfectiva, meta, listaCorrecta, ss);
-    return 'MOVED';
+  // FIX bug routing: solo mover si la categoría existe explícitamente.
+  // Si no hay categoría, respetar la lista actual de Google Tasks
+  // (típicamente: tarea creada desde móvil o desde una webapp externa
+  // que aún no asigna categoría).
+  if (filaEfectiva.categoria && filaEfectiva.categoria.trim() !== '') {
+    const listaCorrecta = obtenerListaParaCategoria(filaEfectiva.categoria, listasMap);
+    if (listaCorrecta.id !== meta.taskListId) {
+      moverTareaDeListaAOtra(filaEfectiva, meta, listaCorrecta, ss);
+      return 'MOVED';
+    }
   }
 
   const taskUpdated = new Date(taskGoogle.updated);
