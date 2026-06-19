@@ -875,6 +875,35 @@ function crearTaskDesdeFila(sheet, fila, taskListId, taskListName, ss) {
 // crear la fila, ESCRIBE LA HUELLA en las notes de la tarea de Google Tasks
 // (CAPA 1) para que nunca se vuelva a importar como nueva.
 
+/**
+ * Extrae el marcador "· meta cat=X imp=Y urg=Z" de las notes de una
+ * tarea de Google Tasks. Devuelve { cat, imp, urg, notesLimpias }.
+ * notesLimpias son las notes sin esa línea (lista para escribir en
+ * la columna Descripción del Sheet).
+ *
+ * Si no hay marcador, devuelve { cat:'', imp:'', urg:'',
+ * notesLimpias: notes }.
+ */
+function extraerMetaDeNotes(notes) {
+  if (!notes) return { cat:'', imp:'', urg:'', notesLimpias:'' };
+  const regex = /\n?·\s*meta\s+([^\n]+)\s*$/;
+  const match = String(notes).match(regex);
+  if (!match) return { cat:'', imp:'', urg:'', notesLimpias: notes };
+
+  const pares = match[1].trim().split(/\s+/);
+  const meta = { cat:'', imp:'', urg:'' };
+  for (const par of pares) {
+    const [clave, valor] = par.split('=');
+    if (!clave || !valor) continue;
+    const valorLimpio = valor.replace(/_/g, ' ').trim();
+    if (clave === 'cat') meta.cat = valorLimpio;
+    else if (clave === 'imp') meta.imp = valorLimpio;
+    else if (clave === 'urg') meta.urg = valorLimpio;
+  }
+  meta.notesLimpias = String(notes).replace(regex, '').replace(/\s+$/, '');
+  return meta;
+}
+
 function crearFilaDesdeTaskGoogle(sheet, taskGoogle, taskListId, ss) {
   const targetRow = encontrarPrimeraFilaVacia(sheet);
   const nuevoId = generarSiguienteIdLadcc(sheet);
@@ -886,7 +915,11 @@ function crearFilaDesdeTaskGoogle(sheet, taskGoogle, taskListId, ss) {
   sheet.getRange(targetRow, COL_V31.ARCHIVAR).insertCheckboxes();
   sheet.getRange(targetRow, COL_V31.SYNC_A_TASKS).insertCheckboxes();
 
-  const notasLimpias = limpiarHuella(taskGoogle.notes || '');
+  // Task 3: parsear el marcador "· meta cat=X imp=Y urg=Z" de las notes
+  // para enriquecer la importación (Categoría/Importancia/Urgencia). Las
+  // notesLimpias quedan sin esa línea, listas para la columna Descripción.
+  const metaNotes = extraerMetaDeNotes(taskGoogle.notes || '');
+  const notasLimpias = limpiarHuella(metaNotes.notesLimpias);
 
   const valores = new Array(17).fill('');
   valores[COL_V31.HECHA - 1]            = false;
@@ -895,6 +928,9 @@ function crearFilaDesdeTaskGoogle(sheet, taskGoogle, taskListId, ss) {
   valores[COL_V31.TAREA - 1]            = limpiarPrefijoSiExiste(
                                             limpiarHuellaDeTitulo(taskGoogle.title || ''));
   valores[COL_V31.DESCRIPCION - 1]      = notasLimpias;
+  valores[COL_V31.IMPORTANCIA - 1]      = metaNotes.imp;
+  valores[COL_V31.URGENCIA - 1]         = metaNotes.urg;
+  valores[COL_V31.CATEGORIA - 1]        = metaNotes.cat;
   valores[COL_V31.DEADLINE - 1]         = parsearFechaDesdeGoogleTasks(taskGoogle.due);
   valores[COL_V31.ESTADO - 1]           = taskGoogle.status === TASKS_STATUS.COMPLETED
                                             ? ESTADO_TXT.HECHA : ESTADO_TXT.PENDIENTE;
