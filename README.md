@@ -53,3 +53,12 @@ pares `clave=valor` separados por espacios.
 
 Tras la importación, la línea `· meta` se elimina de la descripción y la
 tarea en Google Tasks queda con solo la huella `· LADCC-XXXX`.
+
+## Integración con CeoDesk (Google Tasks como hub)
+
+CeoDesk (`ceodesk.superlikers.com`) es la interfaz principal para consultar y
+gestionar el trabajo, y usa **Google Tasks como hub compartido** con LADCC
+Tasks: CeoDesk lee/escribe las 6 listas vía Service Account y LADCC las espeja
+al Sheet. El contrato de integración (formato de `notes`, huella, `· meta`,
+mapeo de estados y reglas anti-loop) está en
+[`docs/INTEGRATION_GOOGLE_TASKS.md`](docs/INTEGRATION_GOOGLE_TASKS.md).
